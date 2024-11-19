@@ -4,4 +4,4 @@ Python script for processing the spotify streaming history. There are a few exam
 
 To request your streaming history visit this link: [https://www.spotify.com/account/privacy/](https://www.spotify.com/account/privacy/)
 
-Place your extracted json files into a "Data" directory, install the dependencies (only pandas) and run the script.
+Place your extracted json files into a "Data" directory, install the dependencies (only pandas) and run the script. Some csv files will be placed in a "Results" directory, just open those with your favourite spreadsheet application.
