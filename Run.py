@@ -64,6 +64,8 @@ def main():
     if not os.path.exists(os.path.join(data_dir, data_filename)):
         process_data()
     data = read_data()
+    print(f'total hours: {data["hours_played"].sum():.0f}')
+    print(f'plays: {data["plays"].sum()}')
     save_artists(data)
     save_tracks(data)
     save_annoying_tracks(data)
