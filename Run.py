@@ -13,9 +13,9 @@ def process_data():
         if file.endswith(".json") and "Audio" in file:
             data.append(pd.read_json(os.path.join(data_dir, file)))
     data = pd.concat(data, ignore_index=True)
-    data = data[['ts', 'ms_played', 'master_metadata_track_name', 'master_metadata_album_artist_name']]
+    data = data[['ts', 'ms_played', 'master_metadata_track_name', 'master_metadata_album_artist_name', 'spotify_track_uri']]
     data['hours_played'] = data['ms_played'] / 1000 / 3600
-    data = data.rename(columns={'master_metadata_track_name': 'track', 'master_metadata_album_artist_name': 'artist'})
+    data = data.rename(columns={'master_metadata_track_name': 'track', 'master_metadata_album_artist_name': 'artist', 'spotify_track_uri': 'uri'})
     data.drop(columns=['ms_played'])
     data.to_csv(os.path.join(data_dir, data_filename))
     return data
@@ -33,13 +33,19 @@ def save_artists(data, min_hours_played=1):
     x[x['hours_played'] > min_hours_played].to_csv(os.path.join(out_dir, "artists.csv"))
 
 
-def save_tracks(data, min_hours_played=0.1):
-    x = data.groupby(["artist", "track"])[["hours_played", "plays"]].sum().sort_values(by="hours_played", ascending=False)
-    x[x['hours_played'] > min_hours_played].to_csv(os.path.join(out_dir, "tracks.csv"))
+def save_tracks_by_time(data, min_hours_played=0.1):
+    x = data.groupby(["artist", "track", "uri"])[["hours_played", "plays"]].sum().sort_values(by="hours_played", ascending=False)
+    x[x['hours_played'] > min_hours_played].to_csv(os.path.join(out_dir, "tracks_by_time.csv"))
+
+
+def save_tracks_by_plays(data, min_playes=20, min_seconds_per_play=30):
+    x = data[data["hours_played"] > min_seconds_per_play / 3600]
+    x = x.groupby(["artist", "track", "uri"])[["hours_played", "plays"]].sum().sort_values(by="plays", ascending=False)
+    x[x['plays'] > min_playes].to_csv(os.path.join(out_dir, "tracks_by_plays.csv"))
 
 
 def save_annoying_tracks(data, min_plays=20):
-    x = data.groupby(["artist", "track"])[["hours_played", "plays"]].sum()
+    x = data.groupby(["artist", "track", "uri"])[["hours_played", "plays"]].sum()
     x = x[x["plays"] > min_plays]
     x["seconds_per_play"] = x["hours_played"] / x["plays"] * 3600
     x = x.sort_values(by="seconds_per_play", ascending=True)
@@ -47,7 +53,7 @@ def save_annoying_tracks(data, min_plays=20):
 
 
 def save_least_skipped(data, min_plays=10):
-    x = data.groupby(["artist", "track"])[["hours_played", "plays"]].agg({
+    x = data.groupby(["artist", "track", "uri"])[["hours_played", "plays"]].agg({
         'hours_played': ['sum', 'max'],
         'plays': 'sum'
     })
@@ -67,7 +73,8 @@ def main():
     print(f'total hours: {data["hours_played"].sum():.0f}')
     print(f'plays: {data["plays"].sum()}')
     save_artists(data)
-    save_tracks(data)
+    save_tracks_by_time(data)
+    save_tracks_by_plays(data)
     save_annoying_tracks(data)
     save_least_skipped(data)
 
