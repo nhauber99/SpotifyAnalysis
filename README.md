@@ -8,4 +8,5 @@ Place your extracted json files into a "Data" directory, install the dependencie
 
 You can also select the "uri" column and copy the values into a Spotify playlist which automatically adds the correct tracks, this allows for creating some pretty large playlists:
 
-![image](https://github.com/user-attachments/assets/ca29fc70-5b47-4bc4-a5ce-30f5a483ef1b)
+![image](https://github.com/user-attachments/assets/c088c34c-b292-4dc0-a5db-3f06626540d4)
+
