@@ -73,7 +73,7 @@ def save_tracks_by_plays(data, min_playes=20, min_seconds_per_play=30):
 
 
 def post_process(data):
-    data['rel_time'] = (data["ms_played"] / data["duration_ms"]).clip(0, 1)
+    data['rel_time'] = (data["ms_played"] / data["duration_ms"]).clip(0, 1.5)
     data['rel_time_3m'] = data["sec_played"] / 180
 
     trackdone_start_mask = data['reason_start'] == 'trackdone'
@@ -85,12 +85,19 @@ def post_process(data):
     clickrow_mask = data['reason_start'] == 'clickrow'
     backbtn_mask = data['reason_start'] == 'backbtn'
 
+    # base score for each play
     data['score'] = 0.2
+    # bonus for longer listening / penalty for skipped songs
     data['score'] += data['rel_time'] - 0.5
+    # add some additional score for long listening times
     data['score'] += 0.1 * (data['rel_time_3m'] - 0.5)
+    # reduce impact of score if listened for a long time without skipping (maybe afk/less inclined to skip)
     data.loc[trackdone_mask, 'score'] /= 0.5 * (data.loc[trackdone_mask, 'consecutive_trackdone'] + 4).pow(0.5)
+    # if listened to a long time without skipping, penalize the first song that is skipped
     data.loc[fwdbtn_mask, 'score'] -= 0.3 * data.loc[fwdbtn_mask, 'consecutive_trackdone'].clip(0, 5)
+    # bonus for songs actively clicked on
     data.loc[clickrow_mask, 'score'] += 0.4 * data.loc[clickrow_mask, 'rel_time']
+    # bonus for songs reached via the back button
     data.loc[backbtn_mask, 'score'] += 0.4 * data.loc[backbtn_mask, 'rel_time']
 
     return data
