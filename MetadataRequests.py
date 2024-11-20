@@ -13,7 +13,7 @@ def request_access_token():
         client_id = f.readline().strip()
         client_secret = f.readline().strip()
     auth_url = 'https://accounts.spotify.com/api/token'
-    auth_header = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    auth_header = base64.b64encode(f'{client_id}:{client_secret}'.encode()).decode()
     headers = {'Authorization': f'Basic {auth_header}'}
     data = {'grant_type': 'client_credentials'}
     response = requests.post(auth_url, headers=headers, data=data)
@@ -22,7 +22,7 @@ def request_access_token():
 
 
 def request_track_metadata(data, access_token, file_path):
-    track_ids = data["track_id"].unique()
+    track_ids = data['track_id'].unique()
 
     metadata_list = []
     endpoint = 'https://api.spotify.com/v1/tracks'
@@ -35,7 +35,7 @@ def request_track_metadata(data, access_token, file_path):
         if response.status_code == 200:
             metadata_list.extend(response.json()['tracks'])
         else:
-            print(f"Error: {response.status_code}, {response.text}")
+            print(f'Error: {response.status_code}, {response.text}')
 
         time.sleep(0.3)  # limit requests
 
@@ -51,7 +51,7 @@ def request_track_metadata(data, access_token, file_path):
 
 
 def request_album_metadata(track_data, access_token, file_path):
-    album_data = pd.read_json("Data/album_metadata2.json")
+    album_data = pd.read_json('Data/album_metadata2.json')
     album_ids = pd.unique(track_data['album.id'])
     album_ids = np.setdiff1d(album_ids, np.array(album_data['id']))
     metadata_list = []
@@ -65,7 +65,7 @@ def request_album_metadata(track_data, access_token, file_path):
         if response.status_code == 200:
             metadata_list.extend(response.json()['albums'])
         else:
-            print(f"Error: {response.status_code}, {response.text}")
+            print(f'Error: {response.status_code}, {response.text}')
 
         time.sleep(0.3)  # limit requests
 
@@ -88,7 +88,7 @@ def request_artist_metadata(track_data, access_token, file_path):
         if response.status_code == 200:
             metadata_list.extend(response.json()['artists'])
         else:
-            print(f"Error: {response.status_code}, {response.text}")
+            print(f'Error: {response.status_code}, {response.text}')
 
         time.sleep(0.3)  # limit requests
 
