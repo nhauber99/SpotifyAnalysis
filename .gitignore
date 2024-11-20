@@ -164,3 +164,4 @@ cython_debug/
 .idea
 *.json
 *.csv
+spotify_api_key.txt
