@@ -5,6 +5,7 @@ import pandas as pd
 from MetadataRequests import request_access_token, request_track_metadata, request_artist_metadata, request_album_metadata
 
 enable_metadata = False  # still experimental and I'm waiting on my api rate limit to end until continuing this
+use_cache = True
 data_dir = "Data"
 out_dir = "Results"
 data_filename = "audio_data.csv"
@@ -14,6 +15,8 @@ album_data_filename = "album_metadata.json"
 
 
 def process_data():
+    # initial processing to aggregate all files and write the relevant information to another file
+    # this significantly speeds up the script when it's run multiple times (after changing some settings for example)
     data = []
     for file in os.listdir(data_dir):
         if file.startswith("Streaming_History_Audio_") and file.endswith(".json"):
@@ -27,6 +30,7 @@ def process_data():
 
 
 def read_data():
+    # read cached data file
     data = pd.read_csv(os.path.join(data_dir, data_filename))
     data['track_id'] = data['uri'].str[14:]
     data['ts'] = pd.to_datetime(data['ts'])
@@ -38,6 +42,7 @@ def read_data():
 
 
 def join_data(data, track_data, artist_data, album_data):
+    # aggregate listening history and the gathered metadata
     data = pd.merge(data, track_data, how='left', left_on='track_id', right_on='id')
     data.rename(columns={'name': 'track.name', 'popularity': 'track.popularity'}, inplace=True)
     data = pd.merge(data, artist_data, how='left', left_on='artist0', right_on='id')
@@ -51,6 +56,7 @@ def join_data(data, track_data, artist_data, album_data):
 
 
 def save_artists(data, min_hours_played=1):
+    # top artists by listening time
     x = data.groupby(["artist"])[["hours_played", "plays"]].sum().sort_values(by="hours_played", ascending=False)
     x[x['hours_played'] > min_hours_played].to_csv(os.path.join(out_dir, "artists.csv"))
 
@@ -64,18 +70,6 @@ def save_tracks_by_plays(data, min_playes=20, min_seconds_per_play=30):
     x = data[data["hours_played"] > min_seconds_per_play / 3600]
     x = x.groupby(["artist", "track", "uri"])[["hours_played", "plays"]].sum().sort_values(by="plays", ascending=False)
     x[x['plays'] > min_playes].to_csv(os.path.join(out_dir, "tracks_by_plays.csv"))
-
-
-def save_least_skipped(data, min_plays=10):
-    x = data.groupby(["artist", "track", "uri"])[["hours_played", "plays"]].agg({
-        'hours_played': ['sum', 'max'],
-        'plays': 'sum'
-    })
-    x = x[x["plays"]["sum"] > min_plays]
-    x["assumed_song_length_minute"] = x["hours_played"]["max"] * 60
-    x["rel_avg_listen"] = x["hours_played"]["sum"] / x["plays"]["sum"] / x["hours_played"]["max"]
-    x.sort_values(by="rel_avg_listen", ascending=False, inplace=True)
-    x.to_csv(os.path.join(out_dir, "least_skipped_tracks.csv"))
 
 
 def post_process(data):
@@ -120,9 +114,10 @@ def save_by_mean_score(data, min_plays=5):
 
 
 def main():
+    # delete the audio_data.csv file if changing the input files, otherwise the cache will be used!
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    if not os.path.exists(os.path.join(data_dir, data_filename)):
+    if not use_cache or not os.path.exists(os.path.join(data_dir, data_filename)):
         process_data()
     data = read_data()
     print(f'total hours: {data["hours_played"].sum():.0f}')
@@ -133,7 +128,6 @@ def main():
     save_artists(data)
     save_tracks_by_time(data)
     save_tracks_by_plays(data)
-    save_least_skipped(data)
 
     # metadata
     if enable_metadata:
@@ -158,6 +152,8 @@ def main():
     else:
         data["duration_ms"] = data.groupby('uri')['ms_played'].transform('max').clip(1000 * 60 * 2, 1000 * 60 * 5)
     post_process(data)
+
+    # advanced statistics making use of the calculated score / metadata
     save_by_score(data)
     save_by_mean_score(data)
 
